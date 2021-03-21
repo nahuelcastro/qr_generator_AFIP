@@ -15,8 +15,7 @@ import time
 
 
 
-def magia():
-
+def magia(src_path):
     data = {"CantReg":[],"CbteTipo":[],"Cuit":[],"FchProceso":[],"PtoVta":[],"Reproceso":[],"Resultado":[],"CAE":[],"CAEFchVto":[],"CbteDesde":[],"CbteFch":[],"CbteHasta":[],"Concepto":[],"DocNro":[],"DocTipo":[]}
 
     VER =  '1'
@@ -33,14 +32,21 @@ def magia():
     TIPO_COD_AUT = '"A"'
     codAut = 'CAE'
 
+    src_path_without_ext = os.path.splitext(src_path)
+    src_path_without_ext = src_path_without_ext[0].split('/')
+    filename = src_path_without_ext[len(src_path_without_ext)-1]
 
-    PDF    = 'FACA000300005533'
-    FOLDER = 'FACA000300005533'
-    XML = 'FACA000300005533AFIP.XML' 
+    SLASH = '/'
+    PDF    = filename                       #'FACA000300005533'
+    folder_info_name = filename + SLASH     #'FACA000300005533'
+    XML = filename + 'AFIP.XML'             #'FACA000300005533AFIP.XML'
+    FOLDER_MASTER_INFO = 'Otros' + SLASH 
+    
+    #armado de paths
+    path_info = FOLDER_MASTER_INFO + folder_info_name
+    path_importe = path_info + 'importe_total'
 
-    xml = minidom.parse('Otros/'+FOLDER+'/'+XML)
-
-
+    xml = minidom.parse(path_info + XML)
     fields = xml.getElementsByTagName("field")
 
     #extraccion del xml y cargado de datos a data
@@ -61,9 +67,9 @@ def magia():
     # Pedir importe
 
     # Tomar el importe de importe_total.txt, en caso de no existir, lo pide y crea
-    f = open('Otros/'+FOLDER+'/'+'importe_total', "a+")
+    f = open(path_importe, "a+")
     f.close()
-    f = open('Otros/'+FOLDER+'/'+'importe_total', "r+")
+    f = open(path_importe, "r+")
     contenido = f.read()
     if contenido =='':
         print('Ingrese el importe total:')
@@ -106,8 +112,10 @@ def magia():
 
 def on_created(event):
     print("created")
-    print(event.src_path)
-    magia()
+    src_path = event.src_path
+    print("path: " + src_path)
+    if src_path.endswith(('.pdf')):
+        magia(src_path)
 
 def on_deleted(event):
     print("deleted")
