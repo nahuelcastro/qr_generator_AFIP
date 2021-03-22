@@ -8,7 +8,9 @@ from PIL import Image
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
-
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from  PyPDF2 import PdfFileReader, PdfFileWriter
 
 
 
@@ -43,8 +45,10 @@ def magia(src_path):
     FOLDER_MASTER_INFO = 'Otros' + SLASH 
     
     #armado de paths
+    path_pdf_original = src_path
     path_info = FOLDER_MASTER_INFO + folder_info_name
     path_importe = path_info + 'importe_total'
+    path_pfd_with_qr = 'PDF_QR/'
 
     xml = minidom.parse(path_info + XML)
     fields = xml.getElementsByTagName("field")
@@ -98,13 +102,48 @@ def magia(src_path):
     img.save(f)
     f.close()
 
-    #pegar en mascara
-    img_bg = Image.open('mascara_a.jpg')    # 428 x 584 px
-    img_qr = Image.open('qr_output.jpg')
-    img_qr = img_qr.resize((100,100))
-    img_bg.paste(img_qr,(20,770))
-    img_bg.show()
+    # #pegar en mascara img
+    # img_bg = Image.open('mascara_a.jpg')    # 428 x 584 px
+    # img_qr = Image.open('qr_output.jpg')
+    # img_qr = img_qr.resize((100,100))
+    # img_bg.paste(img_qr,(20,770))
+    # img_bg.show()
 
+
+    ### PDF 
+
+    pdf_original = PdfFileReader(path_pdf_original, strict=False)
+    page_pdf_original = pdf_original.getPage(0)
+
+
+    # create pdf with only qr >>> tamaño A4 es  =  (595.275590551181, 841.8897637795275) weight, height
+    w, h = A4
+    path_only_pdf_qr = "only_qr.pdf"
+    c = canvas.Canvas(path_only_pdf_qr, pagesize=A4)
+    c.drawImage(PATH_QR_IMG, 18 , 15, width=85, height=85)
+    c.showPage()
+    c.save()
+
+    #merge pdfs
+    pdf_qr_only = PdfFileReader(path_only_pdf_qr)
+    page_pdf_original.mergePage(pdf_qr_only.getPage(0))
+
+    PATH_OUTPUT = path_pfd_with_qr + PDF + '.pdf'   # output.pdf
+    # PATH_OUTPUT = "output.pdf" #"output.png"
+    print (PATH_OUTPUT)
+    output = PdfFileWriter()
+    output.addPage(page_pdf_original)
+    outputStream = open(PATH_OUTPUT, 'wb')
+    output.write(outputStream)
+    outputStream.close()
+
+
+    # PATH_OUTPUT = "output.pdf" #"output.png"
+    # output = PdfFileWriter()
+    # output.addPage(page_pdf_original)
+    # outputStream = open(PATH_OUTPUT, 'wb')
+    # output.write(outputStream)
+    # outputStream.close()
 
 
 
