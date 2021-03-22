@@ -11,6 +11,43 @@ import time
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from  PyPDF2 import PdfFileReader, PdfFileWriter
+import tkinter
+
+
+#Variables globales
+global IMPORTE
+global m
+
+# def pedir_importe():
+#     print('Ingrese el importe total:')
+#     importe = input()
+#     return importe
+
+
+
+
+#def pedir_importe():
+    
+    # display = tkinter.Tk()
+    # display.geometry("400x300")
+
+    # CajaTexto = tkinter.Entry(display)
+    # CajaTexto.pack()
+
+    # def clickkk():
+    #     global IMPORTE
+    #     IMPORTE = CajaTexto.get()
+    #     print (IMPORTE)
+    #     display.destroy()
+
+    # button = tkinter.Button(display, text = "Next", command= clickkk )
+    # button.pack()
+
+    # display.mainloop()
+
+    # print('Ingrese el importe total:')
+    # importe = input()
+    # return importe
 
 
 
@@ -26,13 +63,16 @@ def magia(src_path):
     ptoVta = 'PtoVta'
     tipoCmp = 'CbteTipo'
     nroCmp = 'CbteDesde'
-    IMPORTE = "10630" # DESPUES PONERLO PARA QUE LO PIDA
     MONEDA = '"PES"'
     CTZ = '1'
     tipoDocRec = 'DocTipo'
     nroDocRec = 'DocNro'
     TIPO_COD_AUT = '"A"'
     codAut = 'CAE'
+    global IMPORTE
+    IMPORTE = ''
+    global m 
+    m = False
 
     src_path_without_ext = os.path.splitext(src_path)
     src_path_without_ext = src_path_without_ext[0].split('/')
@@ -71,19 +111,59 @@ def magia(src_path):
     # Pedir importe
 
     # Tomar el importe de importe_total.txt, en caso de no existir, lo pide y crea
-    f = open(path_importe, "a+")
-    f.close()
-    f = open(path_importe, "r+")
-    contenido = f.read()
+    txt_importe = open(path_importe, "a+")
+    txt_importe.close()
+    txt_importe = open(path_importe, "r+")
+    contenido = txt_importe.read()
     if contenido =='':
-        print('Ingrese el importe total:')
-        IMPORTE = input()
-        f.write(IMPORTE)
+        #print('Ingrese el importe total:')
+        #IMPORTE = input()
+        
+
+        display = tkinter.Tk()
+        display.geometry("400x300")
+
+        label = tkinter.Label(display)
+        label.pack()
+        label["text"] = 'doc:' + data[nroDocRec]
+
+        label_fac = tkinter.Label(display)
+        label_fac.pack()
+        label_fac["text"] = 'N de factura:' + data[nroCmp]
+
+        CajaTexto = tkinter.Entry(display)
+        CajaTexto.pack()
+
+
+        def clickkk():
+            global IMPORTE
+            IMPORTE = CajaTexto.get()
+            print (IMPORTE)
+            display.destroy()
+
+        print(IMPORTE)
+
+        button = tkinter.Button(display, text = "Next", command=clickkk )
+        button.pack()
+        
+
+        display.mainloop()
+
+            #         IMPORTE = CajaTexto.get()
+            # m = True
+            # print (IMPORTE)
+            # display.destroy()
+
+
+        print("HASTA ACA LLEGUE 1")
+        print(IMPORTE)
+        txt_importe.write(IMPORTE)
+        print("HASTA ACA LLEGUE 2")
         print("Ok, el importe ingresado es: " + IMPORTE)
     else:
         IMPORTE = contenido
     print('Importe utilizado: ' + IMPORTE)
-    f.close()
+    txt_importe.close()
 
 
 
@@ -120,7 +200,7 @@ def magia(src_path):
     w, h = A4
     path_only_pdf_qr = "only_qr.pdf"
     c = canvas.Canvas(path_only_pdf_qr, pagesize=A4)
-    c.drawImage(PATH_QR_IMG, 18 , 15, width=85, height=85)
+    c.drawImage(PATH_QR_IMG, 163 , 13, width=82, height=82)
     c.showPage()
     c.save()
 
