@@ -1,10 +1,10 @@
-#import xml.etree.ElementTree as ET 
+#import xml.etree.ElementTree as ET
 from threading import Event
 from xml.dom import minidom
 import qrcode
 import base64
 import os
-from PIL import Image
+#from PIL import Image
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
@@ -16,42 +16,6 @@ import tkinter
 
 #Variables globales
 global IMPORTE
-global m
-
-# def pedir_importe():
-#     print('Ingrese el importe total:')
-#     importe = input()
-#     return importe
-
-
-
-
-#def pedir_importe():
-    
-    # display = tkinter.Tk()
-    # display.geometry("400x300")
-
-    # CajaTexto = tkinter.Entry(display)
-    # CajaTexto.pack()
-
-    # def clickkk():
-    #     global IMPORTE
-    #     IMPORTE = CajaTexto.get()
-    #     print (IMPORTE)
-    #     display.destroy()
-
-    # button = tkinter.Button(display, text = "Next", command= clickkk )
-    # button.pack()
-
-    # display.mainloop()
-
-    # print('Ingrese el importe total:')
-    # importe = input()
-    # return importe
-
-
-
-
 
 
 def magia(src_path):
@@ -71,71 +35,77 @@ def magia(src_path):
     codAut = 'CAE'
     global IMPORTE
     IMPORTE = ''
-    global m 
+    global m
     m = False
 
-    src_path_without_ext = os.path.splitext(src_path)
-    src_path_without_ext = src_path_without_ext[0].split('/')
-    filename = src_path_without_ext[len(src_path_without_ext)-1]
+    path = os.getcwd()
+    pdf = os.path.basename(src_path)        # example: pdf = 'FACA000300005533'
+    base = os.path.splitext(pdf)[0]     #'FACA000300005533'
+    folder_info = base
+    XML = base + 'AFIP.XML'             #'FACA000300005533AFIP.XML'
+    FOLDER_MASTER_INFO = 'Otros'
+    FOLDER_MASTER_PDF = 'PDF'
+    FOLDER_MASTER_PDF_QR = 'PDF_QR'
 
-    SLASH = '/'
-    PDF    = filename                       #'FACA000300005533'
-    folder_info_name = filename + SLASH     #'FACA000300005533'
-    XML = filename + 'AFIP.XML'             #'FACA000300005533AFIP.XML'
-    FOLDER_MASTER_INFO = 'Otros' + SLASH 
-    
     #armado de paths
     path_pdf_original = src_path
-    path_info = FOLDER_MASTER_INFO + folder_info_name
-    path_importe = path_info + 'importe_total'
-    path_pfd_with_qr = 'PDF_QR/'
+    path_info = os.path.join(path, FOLDER_MASTER_INFO, folder_info)
+    path_xml = os.path.join(path_info, XML)
+    path_importe = os.path.join(path_info, 'importe_total.txt')
+    path_pfd_with_qr = os.path.join(path, FOLDER_MASTER_PDF_QR)
 
-    xml = minidom.parse(path_info + XML)
-    fields = xml.getElementsByTagName("field")
+
+    time_start = time.time()
+    if(not os.path.exists(path_xml)):
+        print('Todavia no existe el xml, voy a darle hasta 20 segundos mas, sino se rompe todo')
+    while (not os.path.exists(path_xml)):
+        time_now = time.time()
+        if(time_now - time_start > 20 ):
+            'Espere 20 segundos y no aparecio el xml'
+            break
 
     #extraccion del xml y cargado de datos a data
+    xml = minidom.parse(path_xml)
+    fields = xml.getElementsByTagName("field")
+
     for field in fields:
         name = field.getAttribute("name")
         if name in data:
-            data[name] = field.firstChild.data   
+            data[name] = field.firstChild.data
 
 
-    # Acomodar fecha con "-"
+    # Acomodar fecha con "-" example: 20211004 -> 2021-10-04
     year = data[fecha][:4] + '-'
     month_day = data[fecha][4:]
     month_day = month_day[:2] + '-' + month_day[2:]
-    data[fecha] = '"' + year + month_day + '"' 
-
+    data[fecha] = '"' + year + month_day + '"'
 
 
     # Pedir importe
-
     # Tomar el importe de importe_total.txt, en caso de no existir, lo pide y crea
     txt_importe = open(path_importe, "a+")
     txt_importe.close()
     txt_importe = open(path_importe, "r+")
     contenido = txt_importe.read()
     if contenido =='':
-        #print('Ingrese el importe total:')
-        #IMPORTE = input()
-        
 
         display = tkinter.Tk()
         display.geometry("400x300")
+        display.title('QR')
 
         label = tkinter.Label(display)
+        label["text"] = 'Doc: ' + data[nroDocRec]
         label.pack()
-        label["text"] = 'doc:' + data[nroDocRec]
 
         label_fac = tkinter.Label(display)
         label_fac.pack()
-        label_fac["text"] = 'N de factura:' + data[nroCmp]
+        label_fac["text"] = 'N de factura: ' + data[nroCmp]
 
         CajaTexto = tkinter.Entry(display)
         CajaTexto.pack()
 
 
-        def clickkk():
+        def Next(event = None):
             global IMPORTE
             IMPORTE = CajaTexto.get()
             print (IMPORTE)
@@ -143,17 +113,12 @@ def magia(src_path):
 
         print(IMPORTE)
 
-        button = tkinter.Button(display, text = "Next", command=clickkk )
+        CajaTexto.bind('<Return>', Next)
+        button = tkinter.Button(display, text = "Next", command=Next )
         button.pack()
-        
+
 
         display.mainloop()
-
-            #         IMPORTE = CajaTexto.get()
-            # m = True
-            # print (IMPORTE)
-            # display.destroy()
-
 
         print("HASTA ACA LLEGUE 1")
         print(IMPORTE)
@@ -167,13 +132,15 @@ def magia(src_path):
 
 
 
-    #DATOS DE EJEMPLO #DATOS_CMP_BASE_64 = '{"ver":1,"fecha":"2020-10-13","cuit":30000000007,"ptoVta":10,"tipoCmp":1,"nroCmp":94,"importe":12100,"moneda":"DOL","ctz":65,"tipoDocRec":80,"nroDocRec":20000000001,"tipoCodAut":"E","codAut":70417054367476}' 
+    #DATOS DE EJEMPLO #DATOS_CMP_BASE_64 = '{"ver":1,"fecha":"2020-10-13","cuit":30000000007,"ptoVta":10,"tipoCmp":1,"nroCmp":94,"importe":12100,"moneda":"DOL","ctz":65,"tipoDocRec":80,"nroDocRec":20000000001,"tipoCodAut":"E","codAut":70417054367476}'
+    
     URL = 'https://www.afip.gob.ar/fe/qr/'
     DATOS_CMP_BASE_64 = '{"ver":'+VER+',"fecha":'+data[fecha]+',"cuit":'+data[Cuit]+',"ptoVta":'+data[ptoVta]+',"tipoCmp":'+data[tipoCmp]+',"nroCmp":'+data[nroCmp]+',"importe":'+IMPORTE+',"moneda":'+MONEDA+',"ctz":'+CTZ+',"tipoDocRec":'+data[tipoDocRec]+',"nroDocRec":'+data[nroDocRec]+',"tipoCodAut":'+TIPO_COD_AUT+',"codAut":'+data[codAut]+'}'
     DATOS_CMP_BASE_64_ENCODED = base64.b64encode(bytes(DATOS_CMP_BASE_64, 'utf-8')) # encode a 64
     DATOS_CMP_BASE_64_ENCODED = DATOS_CMP_BASE_64_ENCODED.decode("utf-8") # de 64 hay que hacerle esta decodificacion para que sea string
     qr_string = URL + '?p=' + DATOS_CMP_BASE_64_ENCODED
     print(qr_string)
+    print(DATOS_CMP_BASE_64_ENCODED)
 
     # generate qr
     PATH_QR_IMG = "qr_output.jpg"
@@ -182,25 +149,16 @@ def magia(src_path):
     img.save(f)
     f.close()
 
-    # #pegar en mascara img
-    # img_bg = Image.open('mascara_a.jpg')    # 428 x 584 px
-    # img_qr = Image.open('qr_output.jpg')
-    # img_qr = img_qr.resize((100,100))
-    # img_bg.paste(img_qr,(20,770))
-    # img_bg.show()
 
 
-    ### PDF 
-
+    ### PDF
     pdf_original = PdfFileReader(path_pdf_original, strict=False)
     page_pdf_original = pdf_original.getPage(0)
 
-
-    # create pdf with only qr >>> tamaño A4 es  =  (595.275590551181, 841.8897637795275) weight, height
     w, h = A4
     path_only_pdf_qr = "only_qr.pdf"
     c = canvas.Canvas(path_only_pdf_qr, pagesize=A4)
-    c.drawImage(PATH_QR_IMG, 163 , 13, width=82, height=82)
+    c.drawImage(PATH_QR_IMG, 163 , 23.5, width=79, height=79)
     c.showPage()
     c.save()
 
@@ -208,31 +166,21 @@ def magia(src_path):
     pdf_qr_only = PdfFileReader(path_only_pdf_qr)
     page_pdf_original.mergePage(pdf_qr_only.getPage(0))
 
-    PATH_OUTPUT = path_pfd_with_qr + PDF + '.pdf'   # output.pdf
-    # PATH_OUTPUT = "output.pdf" #"output.png"
-    print (PATH_OUTPUT)
+    PATH_OUTPUT = os.path.join(path_pfd_with_qr, pdf)   # output.pdf
     output = PdfFileWriter()
     output.addPage(page_pdf_original)
     outputStream = open(PATH_OUTPUT, 'wb')
     output.write(outputStream)
     outputStream.close()
 
-
-    # PATH_OUTPUT = "output.pdf" #"output.png"
-    # output = PdfFileWriter()
-    # output.addPage(page_pdf_original)
-    # outputStream = open(PATH_OUTPUT, 'wb')
-    # output.write(outputStream)
-    # outputStream.close()
-
-
+    # pruebas de si lo abren solo IMPORTANTE:(SOLO FUNCIONA EN WINDOWS STARTFILE)
+    #os.startfile(PATH_OUTPUT)
 
 
 
 def on_created(event):
     print("created")
     src_path = event.src_path
-    print("path: " + src_path)
     if src_path.endswith(('.pdf')):
         magia(src_path)
 
@@ -266,4 +214,3 @@ if __name__ == "__main__":
     finally:
         observer.stop()
         observer.join()
-
