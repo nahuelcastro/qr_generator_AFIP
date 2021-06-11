@@ -3,7 +3,7 @@ from threading import Event
 from xml.dom import minidom
 import qrcode
 import base64
-import os
+import os, sys, subprocess
 #from PIL import Image
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -14,16 +14,34 @@ from  PyPDF2 import PdfFileReader, PdfFileWriter
 import tkinter
 
 
+
+def open_file(filename):
+    if sys.platform == "win32":
+        os.startfile(filename)
+    else:
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
+
+
+
+
+
+
+
+
 #Variables globales
 global IMPORTE
+global open_original_pdf
+global end_tk
 
 
 def magia(src_path):
-    data = {"CantReg":[],"CbteTipo":[],"Cuit":[],"FchProceso":[],"PtoVta":[],"Reproceso":[],"Resultado":[],"CAE":[],"CAEFchVto":[],"CbteDesde":[],"CbteFch":[],"CbteHasta":[],"Concepto":[],"DocNro":[],"DocTipo":[]}
+    data = {"CantReg":[],"CbteTipo":[],"Cuit":[],"FchProceso":[],"PtoVta":[],"Reproceso":[],"Resultado":[],"CAE":[],"CAEFchVto":[],"CbteDesde":[],"CbteFch":[],"CbteHasta":[],"Concepto":[],"DocNro":[],"DocTipo":[],"CodAutorizacion":[],"FchVto":[]}
 
     VER =  '1'
     fecha = 'CbteFch'
     Cuit = 'Cuit'
+    CUIT = '' #! COMPLETAR CON 'NUMERO DE CUIT' EN FORMATO STR
     ptoVta = 'PtoVta'
     tipoCmp = 'CbteTipo'
     nroCmp = 'CbteDesde'
@@ -37,6 +55,19 @@ def magia(src_path):
     IMPORTE = ''
     global m
     m = False
+
+    global open_final_pdf;
+    open_final_pdf = True;
+
+    global end_tk
+    end_tk = False;
+
+    if(CUIT == ''):
+        print('ERROR, VARIABLE CUIT INCOMPLETA')
+        print('ERROR, VARIABLE CUIT INCOMPLETA')
+        print('ERROR, VARIABLE CUIT INCOMPLETA')
+        return 
+        
 
     path = os.getcwd()
     pdf = os.path.basename(src_path)        # example: pdf = 'FACA000300005533'
@@ -54,15 +85,33 @@ def magia(src_path):
     path_importe = os.path.join(path_info, 'importe_total.txt')
     path_pfd_with_qr = os.path.join(path, FOLDER_MASTER_PDF_QR)
 
+    # time.sleep(1)
+    # time_start = time.time()
+    # if(not os.path.exists(path_xml)):
+    #     print('Todavia no existe el xml, voy a darle hasta 30 segundos mas, sino se rompe todo')
+    # while (not os.path.exists(path_xml)):
+    #     time_now = time.time()
+    #     if(time_now - time_start > 30 ):
+    #         print('Espere 30 segundos y NO aparecio el xml en: \n ', path_xml)
+    #         break
+    # time.sleep(1)
+
+
+    time.sleep(1)
 
     time_start = time.time()
     if(not os.path.exists(path_xml)):
-        print('Todavia no existe el xml, voy a darle hasta 20 segundos mas, sino se rompe todo')
-    while (not os.path.exists(path_xml)):
+        print('Todavia no existe el xml, voy a darle hasta 30 segundos mas, sino se rompe todo')
+    while ( (not os.access(path_xml, os.F_OK)) and (not os.access("gfg.txt", os.R_OK))):
         time_now = time.time()
-        if(time_now - time_start > 20 ):
-            'Espere 20 segundos y no aparecio el xml'
+        if(time_now - time_start > 30 ):
+            print('Espere 30 segundos y NO aparecio el xml en: \n ', path_xml)
             break
+        
+    time.sleep(1)
+
+
+
 
     #extraccion del xml y cargado de datos a data
     xml = minidom.parse(path_xml)
@@ -87,94 +136,140 @@ def magia(src_path):
     txt_importe.close()
     txt_importe = open(path_importe, "r+")
     contenido = txt_importe.read()
-    if contenido =='':
 
-        display = tkinter.Tk()
-        display.geometry("400x300")
-        display.title('QR')
-
-        label = tkinter.Label(display)
-        label["text"] = 'Doc: ' + data[nroDocRec]
-        label.pack()
-
-        label_fac = tkinter.Label(display)
-        label_fac.pack()
-        label_fac["text"] = 'N de factura: ' + data[nroCmp]
-
-        CajaTexto = tkinter.Entry(display)
-        CajaTexto.pack()
+    display = tkinter.Tk()
+    display.geometry("400x300")
+    display.title('QR')
 
 
-        def Next(event = None):
-            global IMPORTE
-            IMPORTE = CajaTexto.get()
-            print (IMPORTE)
-            display.destroy()
+    label = tkinter.Label(display)
+    label["text"] = 'Doc: ' + data[nroDocRec]
+    label.pack()
 
-        print(IMPORTE)
+    label_fac = tkinter.Label(display)
+    label_fac.pack()
+    label_fac["text"] = 'N de factura: ' + data[nroCmp]
 
-        CajaTexto.bind('<Return>', Next)
-        button = tkinter.Button(display, text = "Next", command=Next )
-        button.pack()
+    label_importe = tkinter.Label(display)
+    label_importe.pack()
+    label_importe["text"] = 'IMPORTE: '
 
-
-        display.mainloop()
-
-        print("HASTA ACA LLEGUE 1")
-        print(IMPORTE)
-        txt_importe.write(IMPORTE)
-        print("HASTA ACA LLEGUE 2")
-        print("Ok, el importe ingresado es: " + IMPORTE)
-    else:
-        IMPORTE = contenido
-    print('Importe utilizado: ' + IMPORTE)
-    txt_importe.close()
+    CajaTexto = tkinter.Entry(display)
+    CajaTexto.insert(0, contenido)
+    CajaTexto.pack()
 
 
+    def Next(event = None):
+        global IMPORTE
+        global end_tk
+        IMPORTE = CajaTexto.get()
+        end_tk = True
+        display.destroy()
 
-    #DATOS DE EJEMPLO #DATOS_CMP_BASE_64 = '{"ver":1,"fecha":"2020-10-13","cuit":30000000007,"ptoVta":10,"tipoCmp":1,"nroCmp":94,"importe":12100,"moneda":"DOL","ctz":65,"tipoDocRec":80,"nroDocRec":20000000001,"tipoCodAut":"E","codAut":70417054367476}'
+    def OpenOriginalPDF(event = None):
+        open_file(src_path)
+
     
-    URL = 'https://www.afip.gob.ar/fe/qr/'
-    DATOS_CMP_BASE_64 = '{"ver":'+VER+',"fecha":'+data[fecha]+',"cuit":'+data[Cuit]+',"ptoVta":'+data[ptoVta]+',"tipoCmp":'+data[tipoCmp]+',"nroCmp":'+data[nroCmp]+',"importe":'+IMPORTE+',"moneda":'+MONEDA+',"ctz":'+CTZ+',"tipoDocRec":'+data[tipoDocRec]+',"nroDocRec":'+data[nroDocRec]+',"tipoCodAut":'+TIPO_COD_AUT+',"codAut":'+data[codAut]+'}'
-    DATOS_CMP_BASE_64_ENCODED = base64.b64encode(bytes(DATOS_CMP_BASE_64, 'utf-8')) # encode a 64
-    DATOS_CMP_BASE_64_ENCODED = DATOS_CMP_BASE_64_ENCODED.decode("utf-8") # de 64 hay que hacerle esta decodificacion para que sea string
-    qr_string = URL + '?p=' + DATOS_CMP_BASE_64_ENCODED
-    print(qr_string)
-    print(DATOS_CMP_BASE_64_ENCODED)
-
-    # generate qr
-    PATH_QR_IMG = "qr_output.jpg"
-    img = qrcode.make(qr_string)
-    f = open(PATH_QR_IMG, "wb")
-    img.save(f)
-    f.close()
+    def CheckboxOpen(event = None):
+        global open_final_pdf
+        open_final_pdf = var1.get()
 
 
+    CajaTexto.bind('<Return>', Next)
+    button = tkinter.Button(display, text = "Next", command=Next )
+    button.pack()
 
-    ### PDF
-    pdf_original = PdfFileReader(path_pdf_original, strict=False)
-    page_pdf_original = pdf_original.getPage(0)
+    button_open_pdf = tkinter.Button(display, text = "Abrir PDF original", command=OpenOriginalPDF )
+    button_open_pdf.pack()
 
-    w, h = A4
-    path_only_pdf_qr = "only_qr.pdf"
-    c = canvas.Canvas(path_only_pdf_qr, pagesize=A4)
-    c.drawImage(PATH_QR_IMG, 163 , 23.5, width=79, height=79)
-    c.showPage()
-    c.save()
+    var1 = tkinter.BooleanVar()
+    c1 = tkinter.Checkbutton(display, text='Abrir PDF al finalizar?',variable=var1, onvalue=True, offvalue=False, command=CheckboxOpen)
+    c1.select()
+    c1.pack()
 
-    #merge pdfs
-    pdf_qr_only = PdfFileReader(path_only_pdf_qr)
-    page_pdf_original.mergePage(pdf_qr_only.getPage(0))
+    display.mainloop()
 
-    PATH_OUTPUT = os.path.join(path_pfd_with_qr, pdf)   # output.pdf
-    output = PdfFileWriter()
-    output.addPage(page_pdf_original)
-    outputStream = open(PATH_OUTPUT, 'wb')
-    output.write(outputStream)
-    outputStream.close()
 
-    # pruebas de si lo abren solo IMPORTANTE:(SOLO FUNCIONA EN WINDOWS STARTFILE)
-    #os.startfile(PATH_OUTPUT)
+
+    if(end_tk):
+
+        # limpia txt 
+        txt_importe.close()
+        txt_importe = open(path_importe, "w")
+
+        txt_importe.write(IMPORTE)
+        print("Ok, el importe ingresado es: " + IMPORTE)
+        print('Importe utilizado: ' + IMPORTE)
+        txt_importe.close()
+
+
+        print(data)
+        for x in data:
+            print (x);
+            print (data[x]);
+            print (" ");
+
+        #HARDCODEO:
+        # data[codAut] = '71145231295843'
+        # data['CAEFchVto'] = '2021-04-15'
+        if (data[codAut] == []):
+            data[codAut] = data['CodAutorizacion'];
+            data['CAEFchVto'] = data['FchVto'];
+
+
+        #DATOS DE EJEMPLO #
+        #DATOS_CMP_BASE_64 = '{"ver":1,"fecha":"2020-10-13","cuit":30000000007,"ptoVta":10,"tipoCmp":1,"nroCmp":94,"importe":12100,"moneda":"DOL","ctz":65,"tipoDocRec":80,"nroDocRec":20000000001,"tipoCodAut":"E","codAut":70417054367476}'
+        
+        URL = 'https://www.afip.gob.ar/fe/qr/'
+        DATOS_CMP_BASE_64 = '{"ver":'+VER+',"fecha":'+data[fecha]+',"cuit":'+CUIT+',"ptoVta":'+data[ptoVta]+',"tipoCmp":'+data[tipoCmp]+',"nroCmp":'+data[nroCmp]+',"importe":'+IMPORTE+',"moneda":'+MONEDA+',"ctz":'+CTZ+',"tipoDocRec":'+data[tipoDocRec]+',"nroDocRec":'+data[nroDocRec]+',"tipoCodAut":'+TIPO_COD_AUT+',"codAut":'+data[codAut]+'}'
+        #con str#DATOS_CMP_BASE_64 = '{"ver":'+str(VER)+',"fecha":'+str(data[fecha])+',"cuit":'+str(CUIT)+',"ptoVta":'+str(data[ptoVta])+',"tipoCmp":'+str(data[tipoCmp])+',"nroCmp":'+str(data[nroCmp])+',"importe":'+str(IMPORTE)+',"moneda":'+str(MONEDA)+',"ctz":'+str(CTZ)+',"tipoDocRec":'+str(data[tipoDocRec])+',"nroDocRec":'+str(data[nroDocRec])+',"tipoCodAut":'+str(TIPO_COD_AUT)+',"codAut":'+str(data[codAut])+'}'
+        DATOS_CMP_BASE_64_ENCODED = base64.b64encode(bytes(DATOS_CMP_BASE_64, 'utf-8')) # encode a 64
+        DATOS_CMP_BASE_64_ENCODED = DATOS_CMP_BASE_64_ENCODED.decode("utf-8") # de 64 hay que hacerle esta decodificacion para que sea string
+        qr_string = URL + '?p=' + DATOS_CMP_BASE_64_ENCODED
+        print(qr_string)
+        #print(DATOS_CMP_BASE_64_ENCODED)
+        print('Con estos datos quedo:')
+        print(DATOS_CMP_BASE_64)
+
+        # generate qr
+        PATH_QR_IMG = "qr_output.jpg"
+        img = qrcode.make(qr_string)
+        f = open(PATH_QR_IMG, "wb")
+        img.save(f)
+        f.close()
+
+
+
+        ### PDF
+        pdf_original = PdfFileReader(path_pdf_original, strict=False)
+        page_pdf_original = pdf_original.getPage(0)
+
+        w, h = A4
+        path_only_pdf_qr = "only_qr.pdf"
+        c = canvas.Canvas(path_only_pdf_qr, pagesize=A4)
+        c.drawImage(PATH_QR_IMG, 163 , 23.5, width=79, height=79)
+        c.showPage()
+        c.save()
+
+        #merge pdfs
+        pdf_qr_only = PdfFileReader(path_only_pdf_qr)
+        page_pdf_original.mergePage(pdf_qr_only.getPage(0))
+
+        PATH_OUTPUT = os.path.join(path_pfd_with_qr, pdf)   # output.pdf
+        output = PdfFileWriter()
+        output.addPage(page_pdf_original)
+        outputStream = open(PATH_OUTPUT, 'wb')
+        output.write(outputStream)
+        outputStream.close()
+
+        # if (open_final_pdf is None): 
+        #     open_final_pdf = True
+        print("OPEEEN", open_final_pdf)
+        if(open_final_pdf):
+            open_file(PATH_OUTPUT)
+
+    print("monitoreando")
+
 
 
 
@@ -214,3 +309,4 @@ if __name__ == "__main__":
     finally:
         observer.stop()
         observer.join()
+
