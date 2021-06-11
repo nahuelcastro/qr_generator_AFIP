@@ -102,7 +102,7 @@ def magia(src_path):
     time_start = time.time()
     if(not os.path.exists(path_xml)):
         print('Todavia no existe el xml, voy a darle hasta 30 segundos mas, sino se rompe todo')
-    while ( (not os.access(path_xml, os.F_OK)) and (not os.access("gfg.txt", os.R_OK))):
+    while ( (not os.access(path_xml, os.F_OK)) and (not os.access(path_xml, os.R_OK))):
         time_now = time.time()
         if(time_now - time_start > 30 ):
             print('Espere 30 segundos y NO aparecio el xml en: \n ', path_xml)
